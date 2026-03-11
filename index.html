@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ionenkristallgitter – Interaktive Simulation</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --surface2: #252840;
+    --accent: #4f8ef7;
+    --accent2: #f74f7a;
+    --text: #e8eaf0;
+    --text2: #9aa0b8;
+    --green: #4fde8e;
+    --orange: #f7a24f;
+    --yellow: #f7de4f;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+
+  header {
+    background: var(--surface);
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--surface2);
+    display: flex; align-items: center; gap: 14px;
+  }
+  header h1 { font-size: 1.3rem; font-weight: 700; }
+  header p { color: var(--text2); font-size: 0.85rem; }
+  .badge { background: var(--accent); color: #fff; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+
+  nav.tabs {
+    display: flex; gap: 2px; padding: 14px 28px 0;
+    border-bottom: 2px solid var(--surface2); background: var(--surface);
+  }
+  nav.tabs button {
+    background: none; border: none; color: var(--text2);
+    padding: 9px 18px; cursor: pointer;
+    border-radius: var(--radius) var(--radius) 0 0;
+    font-size: 0.92rem; font-weight: 500; transition: all 0.2s;
+    position: relative; bottom: -2px;
+  }
+  nav.tabs button:hover { color: var(--text); background: var(--surface2); }
+  nav.tabs button.active { color: var(--accent); border-bottom: 2px solid var(--accent); background: var(--bg); }
+
+  .tab-content { display: none; padding: 22px 28px; }
+  .tab-content.active { display: block; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 360px; gap: 18px; align-items: start; }
+  .panel { background: var(--surface); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow); }
+  .panel h2 { font-size: 1rem; margin-bottom: 12px; color: var(--accent); }
+
+  canvas { display: block; border-radius: 8px; background: #08090f; cursor: grab; }
+  canvas:active { cursor: grabbing; }
+
+  .ctrl-group { margin-bottom: 14px; }
+  .ctrl-group label { display: block; font-size: 0.78rem; color: var(--text2); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  select { width: 100%; background: var(--surface2); color: var(--text); border: 1px solid #3a3d55; border-radius: 8px; padding: 7px 10px; font-size: 0.88rem; cursor: pointer; }
+  .val-display { font-size: 0.82rem; color: var(--yellow); font-weight: 600; float: right; }
+
+  .btn { background: var(--accent); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: default; }
+  .btn.secondary { background: var(--surface2); color: var(--text); }
+  .btn.danger { background: var(--accent2); }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .info-card { background: var(--surface2); border-radius: 8px; padding: 11px 13px; margin-bottom: 8px; border-left: 3px solid var(--accent); font-size: 0.86rem; line-height: 1.5; }
+  .info-card.green { border-left-color: var(--green); }
+  .info-card strong { color: var(--yellow); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; }
+  .legend-dot { width: 13px; height: 13px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); }
+
+  .prop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .prop-card { background: var(--surface2); border-radius: 10px; padding: 12px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+  .prop-card:hover { border-color: var(--accent); }
+  .prop-card.active-prop { border-color: var(--accent); background: #1e2240; }
+  .prop-card .prop-icon { font-size: 1.6rem; margin-bottom: 4px; }
+  .prop-card .prop-title { font-weight: 700; font-size: 0.87rem; }
+  .prop-card .prop-short { font-size: 0.76rem; color: var(--text2); margin-top: 2px; }
+
+  .prop-detail { background: var(--surface2); border-radius: var(--radius); padding: 16px; min-height: 100px; }
+  .prop-detail h3 { color: var(--accent); margin-bottom: 8px; font-size: 0.95rem; }
+  .prop-detail p { font-size: 0.86rem; line-height: 1.6; color: var(--text2); margin-bottom: 8px; }
+  .prop-detail ul { padding-left: 16px; font-size: 0.86rem; line-height: 1.75; color: var(--text2); }
+  .prop-detail .merksatz { background: #1a2530; border-left: 3px solid var(--green); padding: 8px 12px; border-radius: 6px; margin-top: 10px; font-size: 0.85rem; color: var(--green); }
+
+  .meter { background: #0a0c18; border-radius: 6px; height: 13px; overflow: hidden; margin-top: 5px; }
+  .meter-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
+
+  /* ION ANIMATION */
+  .ion-steps { display: flex; gap: 6px; margin-bottom: 14px; }
+  .ion-step-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--surface2); border: 2px solid var(--text2); transition: all 0.3s; }
+  .ion-step-dot.done { background: var(--accent); border-color: var(--accent); }
+  .ion-step-dot.active { background: var(--green); border-color: var(--green); }
+
+  /* QUIZ */
+  .quiz-q { font-size: 0.97rem; font-weight: 600; margin-bottom: 12px; }
+  .quiz-option { background: var(--surface2); border: 2px solid transparent; border-radius: 8px; padding: 9px 13px; margin-bottom: 7px; cursor: pointer; font-size: 0.87rem; transition: all 0.2s; }
+  .quiz-option:hover { border-color: var(--accent); }
+  .quiz-option.correct { border-color: var(--green); background: #1a2e22; }
+  .quiz-option.wrong { border-color: var(--accent2); background: #2e1a1f; }
+  .quiz-feedback { margin-top: 8px; padding: 9px 13px; border-radius: 8px; font-size: 0.85rem; display: none; }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.ok { background: #1a2e22; color: var(--green); }
+  .quiz-feedback.nok { background: #2e1a1f; color: var(--accent2); }
+
+  .exp-result { margin-top: 10px; }
+
+  @media (max-width: 860px) {
+    .two-col { grid-template-columns: 1fr; }
+    nav.tabs { overflow-x: auto; white-space: nowrap; }
+    .prop-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Ionenkristallgitter</h1>
+    <p>Interaktive Simulation · Klasse 9 · Gymnasium</p>
+  </div>
+  <span class="badge">Chemie</span>
+</header>
+
+<nav class="tabs">
+  <button class="active" onclick="showTab('gitter',this)">🔷 Kristallgitter</button>
+  <button onclick="showTab('ionen',this)">⚡ Ionenbildung</button>
+  <button onclick="showTab('eigen',this)">🔬 Eigenschaften</button>
+  <button onclick="showTab('quiz',this)">🧪 Quiz</button>
+</nav>
+
+<!-- ===== TAB 1: KRISTALLGITTER ===== -->
+<div id="tab-gitter" class="tab-content active">
+  <div class="two-col">
+    <div class="panel">
+      <h2>🔷 3D-Kristallgitter</h2>
+      <canvas id="gitterCanvas" width="580" height="460"></canvas>
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-dot" id="leg-pos" style="background:#4fc3f7;"></div>
+          <span id="leg-pos-label">Na⁺ (Kation)</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" id="leg-neg" style="background:#f48fb1;"></div>
+          <span id="leg-neg-label">Cl⁻ (Anion)</span>
+        </div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text2);margin-top:7px;">🖱 Drehen: Klicken + Ziehen &nbsp;|&nbsp; Zoom: Mausrad</p>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:14px;">
+        <h2>⚙️ Einstellungen</h2>
+
+        <div class="ctrl-group">
+          <label>Salztyp <span class="val-display" id="salt-label">NaCl</span></label>
+          <select id="saltSelect" onchange="changeSalt()">
+            <option value="NaCl">Natriumchlorid (NaCl)</option>
+            <option value="MgO">Magnesiumoxid (MgO)</option>
+            <option value="CaF2">Calciumfluorid (CaF₂)</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Gittergröße <span class="val-display" id="sizeVal">3×3×3</span></label>
+          <input type="range" id="gridSize" min="2" max="5" value="3" step="1"
+                 oninput="document.getElementById('sizeVal').textContent=this.value+'×'+this.value+'×'+this.value; drawGitter();">
+        </div>
+
+        <div class="ctrl-group">
+          <label>Ionenradius <span class="val-display" id="radiusVal">Mittel</span></label>
+          <input type="range" id="ionRadius" min="0.3" max="1.1" value="0.65" step="0.05"
+                 oninput="updateRadiusLabel(); drawGitter();">
+        </div>
+
+        <div class="ctrl-group">
+          <label>Darstellung</label>
+          <select id="viewMode" onchange="drawGitter();">
+            <option value="solid">Kugel-Stab-Modell</option>
+            <option value="ball">Nur Kugeln</option>
+            <option value="space">Raumfüllend</option>
+          </select>
+        </div>
+
+        <div class="ctrl-group">
+          <label>Drehgeschwindigkeit <span class="val-display" id="speedVal">Mittel</span></label>
+          <input type="range" id="rotSpeed" min="0" max="3" value="1" step="0.1"
+                 oninput="updateSpeedLabel();">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn secondary" onclick="toggleAuto()" id="autoBtn">⏸ Stop</button>
+          <button class="btn secondary" onclick="resetView()">↺ Zurücksetzen</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📋 Salzinfo</h2>
+        <div id="saltInfo"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 2: IONENBILDUNG ===== -->
+<div id="tab-ionen" class="tab-content">
+  <div class="two-col">
+    <div class="panel">
+      <h2>⚡ Ionenbildung – Schalenmodell</h2>
+      <canvas id="ionCanvas" width="580" height="400"></canvas>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <button class="btn" id="ionBtn" onclick="ionNext()">▶ Elektron übertragen</button>
+        <button class="btn secondary" onclick="ionReset()">↺ Zurücksetzen</button>
+        <div class="ion-steps">
+          <div class="ion-step-dot active" id="dot0"></div>
+          <div class="ion-step-dot" id="dot1"></div>
+          <div class="ion-step-dot" id="dot2"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:14px;">
+        <h2>⚙️ Elementpaar wählen</h2>
+        <div class="ctrl-group">
+          <select id="ionPairSel" onchange="ionReset()">
+            <option value="0">Natrium + Chlor (NaCl)</option>
+            <option value="1">Magnesium + Sauerstoff (MgO)</option>
+            <option value="2">Kalium + Chlor (KCl)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px;">
+        <h2>📘 Erklärung</h2>
+        <div id="ionExplain" class="info-card">
+          Klicke auf <strong>"Elektron übertragen"</strong>, um die Ionenbildung Schritt für Schritt zu sehen.
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>📐 Ergebnis</h2>
+        <div id="ionResult" style="color:var(--text2);font-size:0.86rem;">
+          Noch keine Ionen gebildet.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 3: EIGENSCHAFTEN ===== -->
+<div id="tab-eigen" class="tab-content">
+  <div class="two-col">
+    <div>
+      <h2 style="margin-bottom:14px;color:var(--accent);font-size:1rem;">🔬 Klicke eine Eigenschaft an:</h2>
+      <div class="prop-grid">
+        <div class="prop-card" onclick="showProp('schmelz')" id="pc-schmelz">
+          <div class="prop-icon">🌡️</div>
+          <div class="prop-title">Hoher Schmelzpunkt</div>
+          <div class="prop-short">Viel Energie nötig</div>
+        </div>
+        <div class="prop-card" onclick="showProp('sproede')" id="pc-sproede">
+          <div class="prop-icon">💥</div>
+          <div class="prop-title">Sprödigkeit</div>
+          <div class="prop-short">Bricht beim Schlag</div>
+        </div>
+        <div class="prop-card" onclick="showProp('leitung')" id="pc-leitung">
+          <div class="prop-icon">⚡</div>
+          <div class="prop-title">Elektrische Leitung</div>
+          <div class="prop-short">Nur wenn Ionen frei sind</div>
+        </div>
+        <div class="prop-card" onclick="showProp('loeslich')" id="pc-loeslich">
+          <div class="prop-icon">💧</div>
+          <div class="prop-title">Löslichkeit</div>
+          <div class="prop-short">Löst sich in Wasser</div>
+        </div>
+        <div class="prop-card" onclick="showProp('kristall')" id="pc-kristall">
+          <div class="prop-icon">💎</div>
+          <div class="prop-title">Kristallstruktur</div>
+          <div class="prop-short">Geordnetes Gitter</div>
+        </div>
+        <div class="prop-card" onclick="showProp('ionenbind')" id="pc-ionenbind">
+          <div class="prop-icon">🔗</div>
+          <div class="prop-title">Ionenbindung</div>
+          <div class="prop-short">Elektrostatische Kraft</div>
+        </div>
+      </div>
+
+      <div class="prop-detail" id="propDetail">
+        <p style="color:var(--text2);font-style:italic;">Wähle oben eine Eigenschaft aus.</p>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel" style="margin-bottom:14px;">
+        <h2>📊 Schmelzpunkte im Vergleich</h2>
+        <div id="schmelzChart"></div>
+      </div>
+
+      <div class="panel">
+        <h2>🎯 Experiment</h2>
+        <div id="expContainer">
+          <p style="color:var(--text2);font-size:0.85rem;font-style:italic;">Wähle links eine Eigenschaft, um ein Experiment zu sehen.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TAB 4: QUIZ ===== -->
+<div id="tab-quiz" class="tab-content">
+  <div style="max-width:660px;margin:0 auto;">
+    <div class="panel">
+      <h2>🧪 Wissenscheck</h2>
+      <div id="quizContainer"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// SALT DATA (3 Salze)
+// =============================================
+const salts = {
+  NaCl: {
+    name: 'Natriumchlorid (Kochsalz)', formula: 'NaCl',
+    posIon: 'Na⁺', negIon: 'Cl⁻',
+    posColor: '#4fc3f7', negColor: '#f48fb1',
+    posRadius: 0.95, negRadius: 1.81,
+    mp: 801, bp: 1413, solubility: '360 g/L', density: '2,16 g/cm³',
+    structure: 'kubisch (NaCl-Typ)', ratio: '1 : 1',
+    desc: 'Das bekannteste Salz. Jedes Na⁺ ist von 6 Cl⁻ umgeben und umgekehrt (Koordinationszahl 6).',
+    gridMode: 'alternating'
+  },
+  MgO: {
+    name: 'Magnesiumoxid', formula: 'MgO',
+    posIon: 'Mg²⁺', negIon: 'O²⁻',
+    posColor: '#fff176', negColor: '#ce93d8',
+    posRadius: 0.72, negRadius: 1.40,
+    mp: 2852, bp: 3600, solubility: '0,62 g/L', density: '3,58 g/cm³',
+    structure: 'kubisch (NaCl-Typ)', ratio: '1 : 1',
+    desc: 'Sehr hoher Schmelzpunkt durch doppelt geladene Ionen (Mg²⁺, O²⁻). Gleiche Gitterstruktur wie NaCl, aber viel stärkere Bindung.',
+    gridMode: 'alternating'
+  },
+  CaF2: {
+    name: 'Calciumfluorid (Flussspat)', formula: 'CaF₂',
+    posIon: 'Ca²⁺', negIon: 'F⁻',
+    posColor: '#ffb74d', negColor: '#80cbc4',
+    posRadius: 1.00, negRadius: 1.33,
+    mp: 1418, bp: 2500, solubility: '0,016 g/L', density: '3,18 g/cm³',
+    structure: 'Fluorit-Typ (CaF₂-Struktur)', ratio: '1 : 2',
+    desc: 'Auf jedes Ca²⁺ kommen 2 F⁻ (Verhältnis 1:2). Andere Gitterstruktur als NaCl: Ca²⁺ ist von 8 F⁻ umgeben. Kaum wasserlöslich.',
+    gridMode: 'fluorit'
+  }
+};
+
+// =============================================
+// TABS
+// =============================================
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='gitter') drawGitter();
+  if(id==='ionen') { ionReset(); }
+  if(id==='eigen') { buildSchmelzChart(); }
+  if(id==='quiz') buildQuiz();
+}
+
+// =============================================
+// GITTER
+// =============================================
+const gCanvas = document.getElementById('gitterCanvas');
+const gCtx = gCanvas.getContext('2d');
+let rotX = 0.42, rotY = 0.55, autoRot = true, isDragging = false, lastX=0, lastY=0, zoom=1;
+
+gCanvas.addEventListener('mousedown', e=>{isDragging=true;lastX=e.clientX;lastY=e.clientY;});
+gCanvas.addEventListener('mousemove', e=>{
+  if(!isDragging)return;
+  rotY+=(e.clientX-lastX)*0.008; rotX+=(e.clientY-lastY)*0.008;
+  lastX=e.clientX; lastY=e.clientY; drawGitter();
+});
+gCanvas.addEventListener('mouseup',()=>isDragging=false);
+gCanvas.addEventListener('mouseleave',()=>isDragging=false);
+gCanvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  zoom=Math.max(0.4,Math.min(2.5,zoom-e.deltaY*0.001)); drawGitter();
+},{passive:false});
+gCanvas.addEventListener('touchstart',e=>{e.preventDefault();isDragging=true;lastX=e.touches[0].clientX;lastY=e.touches[0].clientY;});
+gCanvas.addEventListener('touchmove',e=>{
+  e.preventDefault(); if(!isDragging)return;
+  rotY+=(e.touches[0].clientX-lastX)*0.012; rotX+=(e.touches[0].clientY-lastY)*0.012;
+  lastX=e.touches[0].clientX; lastY=e.touches[0].clientY; drawGitter();
+});
+gCanvas.addEventListener('touchend',()=>isDragging=false);
+
+function toggleAuto(){
+  autoRot=!autoRot;
+  document.getElementById('autoBtn').textContent=autoRot?'⏸ Stop':'▶ Drehen';
+}
+function resetView(){rotX=0.42;rotY=0.55;zoom=1;drawGitter();}
+
+function updateRadiusLabel(){
+  const v=parseFloat(document.getElementById('ionRadius').value);
+  document.getElementById('radiusVal').textContent=v<0.5?'Klein':v<0.8?'Mittel':v<1.0?'Groß':'Sehr groß';
+}
+function updateSpeedLabel(){
+  const v=parseFloat(document.getElementById('rotSpeed').value);
+  document.getElementById('speedVal').textContent=v===0?'Stop':v<1?'Langsam':v<2?'Mittel':'Schnell';
+}
+
+function rot3D(x,y,z,ax,ay){
+  let cx=x,cz=z;
+  x=cx*Math.cos(ay)-cz*Math.sin(ay); z=cx*Math.sin(ay)+cz*Math.cos(ay);
+  let cy=y,cz2=z;
+  y=cy*Math.cos(ax)-cz2*Math.sin(ax); z=cy*Math.sin(ax)+cz2*Math.cos(ax);
+  return[x,y,z];
+}
+function project(x,y,z,W,H,fov,d){
+  const zz=z+d;
+  return[x*(fov/zz)*zoom+W/2,-y*(fov/zz)*zoom+H/2,z];
+}
+
+let currentSalt='NaCl';
+function changeSalt(){
+  currentSalt=document.getElementById('saltSelect').value;
+  const s=salts[currentSalt];
+  document.getElementById('salt-label').textContent=s.formula;
+  document.getElementById('leg-pos').style.background=s.posColor;
+  document.getElementById('leg-neg').style.background=s.negColor;
+  document.getElementById('leg-pos-label').textContent=s.posIon+' (Kation)';
+  document.getElementById('leg-neg-label').textContent=s.negIon+' (Anion)';
+  updateSaltInfo(); drawGitter();
+}
+
+function updateSaltInfo(){
+  const s=salts[currentSalt];
+  document.getElementById('saltInfo').innerHTML=`
+    <div class="info-card"><strong>${s.name}</strong><br><span style="color:var(--text2);font-size:0.82rem;">${s.desc}</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;font-size:0.81rem;">
+      <div class="info-card">🌡️ Schmelzpunkt<br><strong>${s.mp} °C</strong></div>
+      <div class="info-card green">💧 Löslichkeit<br><strong>${s.solubility}</strong></div>
+      <div class="info-card">⚗️ Verhältnis<br><strong>${s.posIon} : ${s.negIon} = ${s.ratio}</strong></div>
+      <div class="info-card">💎 Struktur<br><strong style="font-size:0.76rem;">${s.structure}</strong></div>
+    </div>
+  `;
+}
+
+function isPosFn(i,j,k,mode){
+  if(mode==='alternating') return (i+j+k)%2===0;
+  if(mode==='fluorit') return (i+j+k)%3===0; // Ca²⁺ seltener → Verhältnis 1:2
+  return (i+j+k)%2===0;
+}
+
+function drawGitter(){
+  const s=salts[currentSalt];
+  const n=parseInt(document.getElementById('gridSize').value);
+  const spacing=58;
+  const ionR=parseFloat(document.getElementById('ionRadius').value);
+  const viewMode=document.getElementById('viewMode').value;
+  const W=gCanvas.width,H=gCanvas.height;
+  const fov=500,d=620;
+
+  gCtx.clearRect(0,0,W,H);
+
+  const atoms=[];
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++) for(let k=0;k<n;k++){
+    const isPos=isPosFn(i,j,k,s.gridMode);
+    const x=(i-(n-1)/2)*spacing, y=(j-(n-1)/2)*spacing, z=(k-(n-1)/2)*spacing;
+    const[rx,ry,rz]=rot3D(x,y,z,rotX,rotY);
+    const[px,py]=project(rx,ry,rz,W,H,fov,d);
+    const r=isPos?s.posRadius:s.negRadius;
+    const screenR=Math.max(5,r*ionR*13);
+    atoms.push({px,py,rz,r:screenR,isPos,color:isPos?s.posColor:s.negColor,
+      wx:x,wy:y,wz:z,rx,ry});
+  }
+  atoms.sort((a,b)=>a.rz-b.rz);
+
+  // Bonds
+  if(viewMode==='solid'){
+    for(let a of atoms) for(let b of atoms){
+      if(a===b||a.isPos===b.isPos)continue;
+      const dx=a.wx-b.wx,dy=a.wy-b.wy,dz=a.wz-b.wz;
+      const dist=Math.sqrt(dx*dx+dy*dy+dz*dz);
+      if(dist<=spacing*1.15){
+        const[rx1,ry1,rz1]=rot3D(a.wx,a.wy,a.wz,rotX,rotY);
+        const[rx2,ry2,rz2]=rot3D(b.wx,b.wy,b.wz,rotX,rotY);
+        const[px1,py1]=project(rx1,ry1,rz1,W,H,fov,d);
+        const[px2,py2]=project(rx2,ry2,rz2,W,H,fov,d);
+        const grad=gCtx.createLinearGradient(px1,py1,px2,py2);
+        grad.addColorStop(0,a.color+'77');
+        grad.addColorStop(1,b.color+'77');
+        gCtx.beginPath();gCtx.moveTo(px1,py1);gCtx.lineTo(px2,py2);
+        gCtx.strokeStyle=grad;gCtx.lineWidth=1.5;gCtx.stroke();
+      }
+    }
+  }
+
+  // Atoms
+  for(let a of atoms){
+    const r=viewMode==='space'?a.r*1.55:a.r;
+    const grad=gCtx.createRadialGradient(a.px-r*0.28,a.py-r*0.28,r*0.05,a.px,a.py,r);
+    grad.addColorStop(0,'#fff');
+    grad.addColorStop(0.2,a.color);
+    grad.addColorStop(1,a.color+'44');
+    gCtx.beginPath();gCtx.arc(a.px,a.py,r,0,Math.PI*2);
+    gCtx.fillStyle=grad;gCtx.fill();
+    if(viewMode!=='space'){gCtx.strokeStyle=a.color+'88';gCtx.lineWidth=1;gCtx.stroke();}
+  }
+}
+
+// Auto-rotation
+let lastTime=0;
+function animLoop(t){
+  if(autoRot&&!isDragging){
+    const dt=(t-lastTime)/1000; lastTime=t;
+    const speed=parseFloat(document.getElementById('rotSpeed').value);
+    rotY+=speed*0.011; drawGitter();
+  }else{lastTime=t;}
+  requestAnimationFrame(animLoop);
+}
+requestAnimationFrame(animLoop);
+changeSalt();
+
+// =============================================
+// ION ANIMATION (vereinfacht)
+// =============================================
+const ionPairs = [
+  { metal:'Na', nonmetal:'Cl' },
+  { metal:'Mg', nonmetal:'O'  },
+  { metal:'K',  nonmetal:'Cl' }
+];
+
+const elData = {
+  Na: { symbol:'Na', name:'Natrium',    shells:[2,8,1], charge:1,  color:'#4fc3f7' },
+  K:  { symbol:'K',  name:'Kalium',     shells:[2,8,8,1], charge:1, color:'#81c784' },
+  Mg: { symbol:'Mg', name:'Magnesium',  shells:[2,8,2], charge:2,  color:'#fff176' },
+  Cl: { symbol:'Cl', name:'Chlor',      shells:[2,8,7], gain:1,    color:'#f48fb1' },
+  O:  { symbol:'O',  name:'Sauerstoff', shells:[2,6],   gain:2,    color:'#ce93d8' }
+};
+
+const ionCanvas = document.getElementById('ionCanvas');
+const ionCtx = ionCanvas.getContext('2d');
+let ionPhase = 0; // 0=neutral, 1=animating, 2=ions
+let ionProgress = 0;
+let ionAnimId = null;
+
+function getCurrPair(){
+  const idx=parseInt(document.getElementById('ionPairSel').value);
+  const p=ionPairs[idx];
+  return{m:elData[p.metal],nm:elData[p.nonmetal]};
+}
+
+function ionReset(){
+  ionPhase=0; ionProgress=0;
+  if(ionAnimId){cancelAnimationFrame(ionAnimId);ionAnimId=null;}
+  document.getElementById('ionBtn').textContent='▶ Elektron übertragen';
+  document.getElementById('ionBtn').disabled=false;
+  updateIonDots();
+  updateIonText();
+  drawIonPhase();
+}
+
+function ionNext(){
+  if(ionPhase===0){
+    ionPhase=1; ionProgress=0;
+    document.getElementById('ionBtn').disabled=true;
+    updateIonDots();
+    updateIonText();
+    ionAnimId=requestAnimationFrame(runIonAnim);
+  } else if(ionPhase===2){
+    ionReset();
+  }
+}
+
+function runIonAnim(){
+  ionProgress=Math.min(ionProgress+0.018,1);
+  drawIonPhase();
+  if(ionProgress<1){
+    ionAnimId=requestAnimationFrame(runIonAnim);
+  } else {
+    ionPhase=2;
+    document.getElementById('ionBtn').textContent='↺ Neu starten';
+    document.getElementById('ionBtn').disabled=false;
+    updateIonDots();
+    updateIonText();
+    drawIonPhase();
+  }
+}
+
+function updateIonDots(){
+  for(let i=0;i<3;i++){
+    const d=document.getElementById('dot'+i);
+    d.className='ion-step-dot';
+    if(i<ionPhase) d.classList.add('done');
+    else if(i===ionPhase) d.classList.add('active');
+  }
+}
+
+function updateIonText(){
+  const{m,nm}=getCurrPair();
+  const charge=m.charge;
+  const texts=[
+    `<strong>${m.name}</strong> (${m.symbol}) hat ${m.shells.reduce((a,b)=>a+b,0)} Elektronen – davon ${charge} in der Außenschale (Valenzelektron${charge>1?'en':''}).<br>
+     <strong>${nm.name}</strong> (${nm.symbol}) hat ${nm.shells.reduce((a,b)=>a+b,0)} Elektronen – es fehlen ${nm.gain} in der Außenschale.`,
+    `Das Valenzelektron${charge>1?'en':''} von ${m.symbol} wird${charge>1?' werden':''} auf ${nm.symbol} übertragen…`,
+    `✅ <strong>${m.symbol}${charge>1?charge:''}⁺</strong> und <strong>${nm.symbol}${nm.gain>1?nm.gain:''}⁻</strong> haben jetzt beide eine vollständig besetzte Außenschale (Edelgaskonfiguration).`
+  ];
+  document.getElementById('ionExplain').innerHTML=texts[Math.min(ionPhase,2)];
+
+  if(ionPhase===2){
+    const gain=nm.gain, c=charge;
+    const lcm=(a,b)=>a*b/gcd(a,b),gcd=(a,b)=>b?gcd(b,a%b):a;
+    const mC=gain/gcd(gain,c), nmC=c/gcd(gain,c);
+    const formula=`${m.symbol}${mC>1?mC:''}${nm.symbol}${nmC>1?nmC:''}`;
+    document.getElementById('ionResult').innerHTML=`
+      <div class="info-card"><span style="color:#4fc3f7;font-weight:700;">${m.symbol}${c>1?c:''}⁺</span> = Kation (positiv geladen)<br>gibt ${c} Elektron${c>1?'en':''} ab</div>
+      <div class="info-card"><span style="color:${nm.color};font-weight:700;">${nm.symbol}${nm.gain>1?nm.gain:''}⁻</span> = Anion (negativ geladen)<br>nimmt ${nm.gain} Elektron${nm.gain>1?'en':''} auf</div>
+      <div class="info-card green">Formeleinheit: <strong>${formula}</strong></div>
+    `;
+  } else {
+    document.getElementById('ionResult').innerHTML='<span style="color:var(--text2);font-size:0.86rem;">Noch keine Ionen gebildet.</span>';
+  }
+}
+
+// Shell drawing
+function drawShellAtom(ctx, cx, cy, el, shells){
+  const nucR=20, gap=28;
+  const shellNames=['K','L','M','N'];
+
+  // Schalen (Kreise)
+  for(let i=0;i<shells.length;i++){
+    const r=nucR+(i+1)*gap;
+    ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1.5; ctx.stroke();
+    // Schalenbezeichnung
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.font='11px Segoe UI,sans-serif'; ctx.textAlign='left';
+    ctx.fillText(shellNames[i], cx+r+4, cy+4);
+  }
+
+  // Elektronen
+  for(let i=0;i<shells.length;i++){
+    const r=nucR+(i+1)*gap;
+    const count=shells[i];
+    const isValence=(i===shells.length-1);
+    for(let e=0;e<count;e++){
+      const angle=(e/Math.max(count,1))*Math.PI*2-Math.PI/2;
+      const ex=cx+r*Math.cos(angle), ey=cy+r*Math.sin(angle);
+      ctx.beginPath(); ctx.arc(ex,ey,5,0,Math.PI*2);
+      ctx.fillStyle=isValence?el.color:'#5c6bc0'; ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.25)'; ctx.lineWidth=0.5; ctx.stroke();
+    }
+  }
+
+  // Kern
+  ctx.beginPath(); ctx.arc(cx,cy,nucR,0,Math.PI*2);
+  ctx.fillStyle=el.color+'bb'; ctx.fill();
+  ctx.strokeStyle=el.color; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='#000'; ctx.font='bold 13px Segoe UI,sans-serif';
+  ctx.textAlign='center'; ctx.fillText(el.symbol, cx, cy+5);
+}
+
+function getIonShells(el,isMetal){
+  const s=[...el.shells];
+  if(isMetal){
+    s[s.length-1]-=el.charge;
+    if(s[s.length-1]<=0) s.pop();
+  } else {
+    s[s.length-1]+=el.gain;
+  }
+  return s;
+}
+
+function drawIonPhase(){
+  const{m,nm}=getCurrPair();
+  const W=ionCanvas.width, H=ionCanvas.height;
+  ionCtx.clearRect(0,0,W,H);
+
+  const cx1=W*0.27, cx2=W*0.73, cy=H*0.44;
+  const nucR=20, gap=28;
+
+  // Schalen die dargestellt werden
+  const mShells=(ionPhase>=2)?getIonShells(m,true):[...m.shells];
+  const nmShells=(ionPhase>=2)?getIonShells(nm,false):[...nm.shells];
+
+  drawShellAtom(ionCtx, cx1, cy, m, mShells);
+  drawShellAtom(ionCtx, cx2, cy, nm, nmShells);
+
+  // Elektronenübertragung animieren (Phase 1)
+  if(ionPhase===1){
+    const numE=m.charge;
+    const outerR=nucR+m.shells.length*gap;
+    for(let e=0;e<numE;e++){
+      const tOffset=e*(0.25/numE);
+      const t=Math.max(0,Math.min(1,(ionProgress-tOffset)/(1-tOffset)));
+      // Startposition: oben auf der Außenschale des Metalls
+      const startX=cx1, startY=cy-outerR;
+      // Endposition: oben auf der Außenschale des Nichtmetalls
+      const nmOuterR=nucR+nm.shells.length*gap;
+      const endX=cx2, endY=cy-nmOuterR;
+      const ex=startX+(endX-startX)*t;
+      // Bogen nach oben
+      const ey=startY+(endY-startY)*t - Math.sin(t*Math.PI)*55;
+
+      // Leuchtspur
+      for(let tr=1;tr<=4;tr++){
+        const tt=Math.max(0,t-tr*0.05);
+        const tx=startX+(endX-startX)*tt;
+        const ty=startY+(endY-startY)*tt-Math.sin(tt*Math.PI)*55;
+        ionCtx.beginPath(); ionCtx.arc(tx,ty,5-tr,0,Math.PI*2);
+        ionCtx.fillStyle=`rgba(79,195,247,${0.3-tr*0.06})`; ionCtx.fill();
+      }
+      // Elektron
+      ionCtx.beginPath(); ionCtx.arc(ex,ey,6,0,Math.PI*2);
+      const eg=ionCtx.createRadialGradient(ex,ey,0,ex,ey,6);
+      eg.addColorStop(0,'#fff'); eg.addColorStop(0.4,'#4fc3f7'); eg.addColorStop(1,'rgba(79,195,247,0)');
+      ionCtx.fillStyle=eg; ionCtx.fill();
+    }
+  }
+
+  // Labels unten
+  const mOuterR=nucR+mShells.length*gap;
+  const nmOuterR=nucR+nmShells.length*gap;
+  const labelOff=24;
+
+  ionCtx.textAlign='center';
+  // Metall
+  const mLabel=ionPhase>=2?`${m.symbol}${m.charge>1?m.charge:''}⁺`:m.symbol;
+  ionCtx.font=`bold 16px Segoe UI,sans-serif`;
+  ionCtx.fillStyle=m.color;
+  ionCtx.fillText(mLabel, cx1, cy+mOuterR+labelOff);
+  ionCtx.font='11px Segoe UI,sans-serif'; ionCtx.fillStyle='rgba(255,255,255,0.45)';
+  ionCtx.fillText(m.name, cx1, cy+mOuterR+labelOff+16);
+  if(ionPhase>=2){
+    ionCtx.fillStyle='#4fde8e'; ionCtx.font='10px Segoe UI,sans-serif';
+    ionCtx.fillText('Edelgaskonf. ✓', cx1, cy+mOuterR+labelOff+30);
+  }
+
+  // Nichtmetall
+  const nmLabel=ionPhase>=2?`${nm.symbol}${nm.gain>1?nm.gain:''}⁻`:nm.symbol;
+  ionCtx.font=`bold 16px Segoe UI,sans-serif`;
+  ionCtx.fillStyle=nm.color;
+  ionCtx.fillText(nmLabel, cx2, cy+nmOuterR+labelOff);
+  ionCtx.font='11px Segoe UI,sans-serif'; ionCtx.fillStyle='rgba(255,255,255,0.45)';
+  ionCtx.fillText(nm.name, cx2, cy+nmOuterR+labelOff+16);
+  if(ionPhase>=2){
+    ionCtx.fillStyle='#4fde8e'; ionCtx.font='10px Segoe UI,sans-serif';
+    ionCtx.fillText('Edelgaskonf. ✓', cx2, cy+nmOuterR+labelOff+30);
+  }
+
+  // Pfeil bei vollständiger Übertragung
+  if(ionPhase>=2){
+    ionCtx.font='12px Segoe UI,sans-serif';
+    ionCtx.fillStyle='rgba(79,222,142,0.8)';
+    ionCtx.textAlign='center';
+    ionCtx.fillText('⟵ elektrostatische Anziehung ⟶', W/2, H-12);
+  }
+}
+
+// =============================================
+// EIGENSCHAFTEN
+// =============================================
+const propData = {
+  schmelz:{
+    title:'🌡️ Hoher Schmelzpunkt',
+    html:`<h3>Warum haben Salze hohe Schmelzpunkte?</h3>
+    <p>Im Ionengitter halten starke <strong>elektrostatische Kräfte</strong> die Ionen zusammen. Um das Gitter zu schmelzen, müssen alle diese Anziehungskräfte überwunden werden – das erfordert sehr viel Energie.</p>
+    <ul>
+      <li>NaCl schmilzt erst bei <strong>801 °C</strong></li>
+      <li>MgO erst bei <strong>2852 °C</strong> – weil Mg²⁺ und O²⁻ doppelt geladen sind</li>
+      <li>Je höher die Ionenladung, desto stärker die Bindung</li>
+    </ul>
+    <div class="merksatz">📌 Größere Ladung = höherer Schmelzpunkt</div>`
+  },
+  sproede:{
+    title:'💥 Sprödigkeit',
+    html:`<h3>Warum brechen Salze beim Schlag?</h3>
+    <p>Im Gitter wechseln sich Plus- und Minusionen regelmäßig ab. Ein <strong>Schlag</strong> verschiebt Gitterebenen:</p>
+    <ul>
+      <li>Gleiche Ionen kommen nebeneinander → stoßen sich ab</li>
+      <li>Das Gitter bricht entlang einer geraden Ebene</li>
+      <li>Metalle dagegen verformen sich (kein Ionengitter)</li>
+    </ul>
+    <div class="merksatz">📌 Ionenkristalle sind hart aber spröde – sie biegen sich nicht</div>`
+  },
+  leitung:{
+    title:'⚡ Elektrische Leitfähigkeit',
+    html:`<h3>Wann leiten Salze Strom?</h3>
+    <p>Elektrischer Strom braucht <strong>frei bewegliche Ladungsträger</strong> (Ionen oder Elektronen):</p>
+    <ul>
+      <li><strong>Festes Salz:</strong> Ionen sind im Gitter fixiert → <em>kein Strom</em></li>
+      <li><strong>Geschmolzenes Salz:</strong> Ionen können sich bewegen → <em>Strom fließt</em></li>
+      <li><strong>Salzlösung in Wasser:</strong> Ionen sind frei → <em>Strom fließt</em></li>
+    </ul>
+    <div class="merksatz">📌 Festes Salz = Nichtleiter. Schmelze oder Lösung = Elektrolyt</div>`
+  },
+  loeslich:{
+    title:'💧 Löslichkeit in Wasser',
+    html:`<h3>Wie lösen sich Salze in Wasser?</h3>
+    <p>Wassermoleküle ziehen die Ionen aus dem Gitter heraus. Die Ionen werden von Wasser-molekülen umhüllt – das nennt man <strong>Hydratation</strong>:</p>
+    <ul>
+      <li>Positive Ionen (Kationen) werden von der negativen Seite des Wassers angezogen</li>
+      <li>Negative Ionen (Anionen) von der positiven Seite</li>
+      <li>Nicht alle Salze lösen sich gleich gut (z. B. CaF₂ kaum löslich)</li>
+    </ul>
+    <div class="merksatz">📌 Wasser löst viele Salze, weil es die Ionen "einhüllt"</div>`
+  },
+  kristall:{
+    title:'💎 Kristallstruktur',
+    html:`<h3>Warum sind Salze kristallin?</h3>
+    <p>Die Ionen ordnen sich so an, dass entgegengesetzte Ionen möglichst nah und gleiche Ionen möglichst weit voneinander entfernt sind:</p>
+    <ul>
+      <li>Die Anordnung ist regelmäßig und wiederholt sich in alle Richtungen</li>
+      <li>Bei NaCl ist jedes Ion von <strong>6 entgegengesetzten</strong> Ionen umgeben</li>
+      <li>Die äußere Form eines Salzkristalls zeigt die innere Ordnung</li>
+    </ul>
+    <div class="merksatz">📌 Drehe das 3D-Gitter im ersten Reiter, um die Struktur zu sehen!</div>`
+  },
+  ionenbind:{
+    title:'🔗 Ionenbindung',
+    html:`<h3>Was ist eine Ionenbindung?</h3>
+    <p>Die Ionenbindung entsteht durch die <strong>Anziehung zwischen gegensätzlichen Ladungen</strong>:</p>
+    <ul>
+      <li>Metalle geben Elektronen ab → positiv geladene <strong>Kationen</strong></li>
+      <li>Nichtmetalle nehmen Elektronen auf → negativ geladene <strong>Anionen</strong></li>
+      <li>Beide erreichen eine vollständig besetzte Außenschale (<strong>Edelgaskonfiguration</strong>)</li>
+      <li>Die Bindung wirkt in alle Richtungen gleich stark</li>
+    </ul>
+    <div class="merksatz">📌 Sieh dir die Ionenbildung im zweiten Reiter an!</div>`
+  }
+};
+
+function showProp(id){
+  document.querySelectorAll('.prop-card').forEach(c=>c.classList.remove('active-prop'));
+  document.getElementById('pc-'+id).classList.add('active-prop');
+  document.getElementById('propDetail').innerHTML=`<div style="border-left:3px solid var(--accent);padding-left:12px;">${propData[id].html}</div>`;
+  if(id==='leitung') buildLeitung();
+  else if(id==='sproede') buildSproede();
+  else if(id==='loeslich') buildLoeslich();
+  else document.getElementById('expContainer').innerHTML='<p style="color:var(--text2);font-size:0.85rem;font-style:italic;">Klicke links auf eine Eigenschaft mit Experiment.</p>';
+}
+
+function buildSchmelzChart(){
+  const data=[
+    {name:'NaCl',mp:801,color:'#4fc3f7'},
+    {name:'KCl',mp:770,color:'#81c784'},
+    {name:'MgO',mp:2852,color:'#fff176'},
+    {name:'CaF₂',mp:1418,color:'#ffb74d'},
+    {name:'Wasser',mp:0,color:'#80cbc4'},
+    {name:'Eisen',mp:1538,color:'#b0bec5'}
+  ];
+  const max=3000;
+  document.getElementById('schmelzChart').innerHTML=data.map(d=>`
+    <div style="margin-bottom:9px;">
+      <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:3px;">
+        <span>${d.name}</span><span style="color:${d.color};font-weight:700;">${d.mp} °C</span>
+      </div>
+      <div class="meter"><div class="meter-fill" style="width:${(d.mp/max*100).toFixed(1)}%;background:${d.color};"></div></div>
+    </div>
+  `).join('');
+}
+
+function buildLeitung(){
+  document.getElementById('expContainer').innerHTML=`
+    <p style="font-size:0.86rem;color:var(--text2);margin-bottom:10px;">Teste die Leitfähigkeit von NaCl:</p>
+    <div style="display:flex;flex-direction:column;gap:7px;">
+      <button class="btn secondary" onclick="testLeitung('fest')">🧂 Festes NaCl</button>
+      <button class="btn secondary" onclick="testLeitung('schmelze')">🔥 Salzschmelze</button>
+      <button class="btn secondary" onclick="testLeitung('loesung')">💧 Salzlösung</button>
+    </div>
+    <div id="leitResult" class="exp-result"></div>
+  `;
+}
+function testLeitung(m){
+  const r={
+    fest:{t:'❌ Kein Strom. Ionen sind fest im Gitter gebunden.',c:'var(--accent2)'},
+    schmelze:{t:'✅ Strom fließt! Ionen sind frei beweglich.',c:'var(--green)'},
+    loesung:{t:'✅ Strom fließt! Ionen sind in Wasser frei beweglich.',c:'var(--green)'}
+  }[m];
+  document.getElementById('leitResult').innerHTML=`<div class="info-card" style="border-left-color:${r.c};margin-top:0;">${r.t}</div>`;
+}
+
+function buildSproede(){
+  document.getElementById('expContainer').innerHTML=`
+    <p style="font-size:0.86rem;color:var(--text2);margin-bottom:8px;">Klicke auf "Schlagen" um zu sehen, was passiert:</p>
+    <canvas id="sproedeCanvas" width="320" height="160" style="border-radius:8px;background:#08090f;display:block;margin-bottom:8px;"></canvas>
+    <button class="btn secondary" style="width:100%;" onclick="animSproede()">🔨 Schlagen!</button>
+    <div id="sproedeInfo" class="info-card" style="margin-top:8px;">Beim Schlag verschieben sich Gitterebenen – gleiche Ionen stoßen sich ab → Bruch.</div>
+  `;
+  drawSproedeInit();
+}
+let sproedeGoing=false,sproedeP=0;
+function drawSproedeInit(){
+  const c=document.getElementById('sproedeCanvas');if(!c)return;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,320,160);
+  for(let i=0;i<6;i++) for(let j=0;j<4;j++){
+    ctx.beginPath();ctx.arc(40+i*40,30+j*34,12,0,Math.PI*2);
+    ctx.fillStyle=(i+j)%2===0?'#4fc3f7':'#f48fb1';ctx.fill();
+  }
+}
+function animSproede(){
+  if(sproedeGoing)return;
+  sproedeGoing=true;sproedeP=0;
+  const c=document.getElementById('sproedeCanvas');if(!c)return;
+  const ctx=c.getContext('2d');
+  const go=()=>{
+    sproedeP=Math.min(sproedeP+0.022,1);
+    ctx.clearRect(0,0,320,160);
+    const sh=sproedeP*42;
+    for(let i=0;i<6;i++) for(let j=0;j<4;j++){
+      const x=40+i*40,y=30+j*34;
+      const isPos=(i+j)%2===0;
+      const shiftX=j>=2?sh:0;
+      const alpha=sproedeP>0.5&&j>=2?1-(sproedeP-0.5)*2:1;
+      ctx.globalAlpha=alpha;
+      ctx.beginPath();ctx.arc(x+shiftX,y,12,0,Math.PI*2);
+      ctx.fillStyle=isPos?'#4fc3f7':'#f48fb1';ctx.fill();
+      ctx.globalAlpha=1;
+    }
+    if(sproedeP>0.4){
+      ctx.strokeStyle=`rgba(255,255,255,${(sproedeP-0.4)*1.5})`;
+      ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(10,98);ctx.lineTo(310,98);ctx.stroke();
+    }
+    if(sproedeP<1)requestAnimationFrame(go);else sproedeGoing=false;
+  };
+  requestAnimationFrame(go);
+}
+
+function buildLoeslich(){
+  document.getElementById('expContainer').innerHTML=`
+    <p style="font-size:0.86rem;color:var(--text2);margin-bottom:8px;">Beobachte das Lösen von NaCl in Wasser:</p>
+    <canvas id="loesCanvas" width="320" height="190" style="border-radius:8px;background:#08090f;display:block;margin-bottom:8px;"></canvas>
+    <button class="btn secondary" style="width:100%;" onclick="startLoesAnim()">💧 Wasser hinzufügen</button>
+  `;
+  drawLoesInit();
+}
+let loesRunning=false,loesParts=[];
+function drawLoesInit(){
+  const c=document.getElementById('loesCanvas');if(!c)return;
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,320,190);
+  for(let i=0;i<4;i++) for(let j=0;j<3;j++){
+    ctx.beginPath();ctx.arc(108+i*30,80+j*30,12,0,Math.PI*2);
+    ctx.fillStyle=(i+j)%2===0?'#4fc3f7':'#f48fb1';ctx.fill();
+  }
+  ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='11px Segoe UI,sans-serif';ctx.textAlign='center';
+  ctx.fillText('NaCl-Kristall',160,180);
+}
+function startLoesAnim(){
+  loesParts=[];
+  for(let i=0;i<4;i++) for(let j=0;j<3;j++){
+    loesParts.push({x:108+i*30,y:80+j*30,vx:(Math.random()-0.5)*1.5,vy:-Math.random()*1.2-0.5,
+      type:(i+j)%2===0?'Na':'Cl',t:-(i*5+j*3)});
+  }
+  loesRunning=true;runLoesAnim();
+}
+function runLoesAnim(){
+  if(!loesRunning)return;
+  const c=document.getElementById('loesCanvas');if(!c){loesRunning=false;return;}
+  const ctx=c.getContext('2d');
+  ctx.clearRect(0,0,320,190);
+  ctx.fillStyle='rgba(79,195,247,0.04)';ctx.fillRect(0,0,320,190);
+  for(let p of loesParts){
+    p.t++;
+    if(p.t>0){
+      p.x+=p.vx;p.y+=p.vy;
+      p.vx+=(Math.random()-0.5)*0.1;p.vy+=(Math.random()-0.5)*0.1;
+      if(p.x<14)p.vx=Math.abs(p.vx);if(p.x>306)p.vx=-Math.abs(p.vx);
+      if(p.y<10)p.vy=Math.abs(p.vy);if(p.y>180)p.vy=-Math.abs(p.vy);
+      // Wasserhülle
+      ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);
+      ctx.strokeStyle='rgba(79,195,247,0.22)';ctx.lineWidth=3;ctx.stroke();
+      // Ion
+      ctx.beginPath();ctx.arc(p.x,p.y,9,0,Math.PI*2);
+      ctx.fillStyle=p.type==='Na'?'#4fc3f7':'#f48fb1';ctx.fill();
+      ctx.fillStyle='#000';ctx.font='bold 7px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.type==='Na'?'Na⁺':'Cl⁻',p.x,p.y+3);
+    }
+  }
+  requestAnimationFrame(runLoesAnim);
+}
+
+// =============================================
+// QUIZ
+// =============================================
+const quizData=[
+  {q:'Warum haben Ionenkristalle wie NaCl hohe Schmelzpunkte?',
+   a:['Weil die Ionen durch starke elektrostatische Kräfte gebunden sind.','Weil Salze sehr schwer sind.','Weil Salzkristalle transparent sind.'],
+   c:0,ex:'Die starken Anziehungskräfte zwischen den Ionen erfordern sehr viel Energie zum Aufbrechen des Gitters.'},
+  {q:'Warum brechen Salzkristalle beim Schlag?',
+   a:['Weil Salze chemisch instabil sind.','Weil gleichnamige Ionen nebeneinander geraten und sich abstoßen.','Weil Wasser im Kristall verdampft.'],
+   c:1,ex:'Beim Schlag verschieben sich Gitterebenen. Gleiche Ionen kommen nebeneinander – die Abstoßung reißt den Kristall auseinander.'},
+  {q:'In welchem Zustand leitet NaCl elektrischen Strom?',
+   a:['Nur im festen Zustand.','In der Schmelze und als Lösung, aber nicht im festen Zustand.','Niemals.'],
+   c:1,ex:'Im festen Zustand sind die Ionen fixiert. Erst beim Schmelzen oder Lösen können sie sich frei bewegen.'},
+  {q:'Was entsteht, wenn Natrium (2-8-1) ein Elektron abgibt?',
+   a:['Ein Na⁻-Ion.','Ein Na⁺-Ion mit der Elektronenkonfiguration 2-8.','Ein Na²⁺-Ion.'],
+   c:1,ex:'Natrium gibt sein Valenzelektron ab und erhält die Konfiguration 2-8 – wie das Edelgas Neon.'},
+  {q:'Warum hat MgO (2852 °C) einen viel höheren Schmelzpunkt als NaCl (801 °C)?',
+   a:['Weil Magnesium schwerer ist.','Weil Mg²⁺ und O²⁻ doppelt geladen sind – die Anziehung ist viel stärker.','Weil MgO eine andere Farbe hat.'],
+   c:1,ex:'Doppelt geladene Ionen ziehen sich viel stärker an als einfach geladene. Daher ist viel mehr Energie nötig, um das MgO-Gitter aufzubrechen.'},
+  {q:'Was ist das Ionenverhältnis in CaF₂?',
+   a:['1 Ca²⁺ : 1 F⁻','1 Ca²⁺ : 2 F⁻','2 Ca²⁺ : 1 F⁻'],
+   c:1,ex:'Ca gibt 2 Elektronen ab (Ca²⁺), aber jedes F nimmt nur 1 auf (F⁻). Daher braucht man 2 Fluorid-Ionen pro Calcium-Ion.'}
+];
+
+let answered={};
+function buildQuiz(){
+  let html='';
+  quizData.forEach((q,i)=>{
+    const ans=answered[i];
+    html+=`<div style="margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--surface2);">
+      <div class="quiz-q">${i+1}. ${q.q}</div>
+      ${q.a.map((a,j)=>`<div class="quiz-option ${ans!==undefined?(j===q.c?'correct':(j===ans&&j!==q.c?'wrong':'')):''}
+        " onclick="answerQ(${i},${j})">${a}</div>`).join('')}
+      <div class="quiz-feedback ${ans!==undefined?'show':''} ${ans!==undefined?(ans===q.c?'ok':'nok'):''}">
+        ${ans!==undefined?(ans===q.c?'✅ Richtig! ':'❌ Falsch! ')+q.ex:''}
+      </div>
+    </div>`;
+  });
+  const score=Object.keys(answered).filter(i=>answered[i]===quizData[i].c).length;
+  const total=Object.keys(answered).length;
+  if(total>0){
+    html+=`<div class="info-card green" style="text-align:center;font-size:0.95rem;margin-bottom:10px;">
+      <strong>Ergebnis: ${score} / ${total} richtig</strong>
+      ${total===quizData.length?'<br>'+getMsg(score,quizData.length):''}
+    </div>`;
+  }
+  html+=`<button class="btn danger" onclick="resetQuiz()">Quiz zurücksetzen</button>`;
+  document.getElementById('quizContainer').innerHTML=html;
+}
+function getMsg(s,t){
+  const p=s/t;
+  if(p===1)return'🎉 Perfekt! Alle Fragen richtig!';
+  if(p>=0.8)return'👍 Sehr gut!';
+  if(p>=0.6)return'✌️ Gut – schau dir die Erklärungen nochmal an.';
+  return'📚 Lies die Erklärungen und versuche es erneut.';
+}
+function answerQ(qi,ai){if(answered[qi]!==undefined)return;answered[qi]=ai;buildQuiz();}
+function resetQuiz(){answered={};buildQuiz();}
+
+// Init
+buildSchmelzChart();
+ionReset();
+</script>
+</body>
+</html>
